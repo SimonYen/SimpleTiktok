@@ -2,6 +2,7 @@ package main
 
 import (
 	"app/config"
+	"app/routes"
 	"fmt"
 
 	"github.com/gin-gonic/gin"
@@ -9,10 +10,7 @@ import (
 
 func main() {
 	r := gin.Default()
-	r.GET("/ping", func(ctx *gin.Context) {
-		ctx.JSON(200, gin.H{
-			"message": "yzy",
-		})
-	})
+	//注册路由
+	routes.Setup(r)
 	r.Run(fmt.Sprintf(":%d", config.Conf.ServerPort))
 }
