@@ -1,3 +1,16 @@
 #服务器配置
 [server]
 port=9999
+
+#Mysql配置
+[mysql]
+port=3306
+host=127.0.0.1
+
+#连接mysql的用户，用root方便些，反正是个demo项目
+user=root
+#这个换上自己的数据库密码
+password=yanzengyi123
+#数据库名称，本来想叫鸡哥的hhh
+database=tiktok
+

@@ -12,5 +12,5 @@ func main() {
 	r := gin.Default()
 	//注册路由
 	routes.Setup(r)
-	r.Run(fmt.Sprintf(":%d", config.Conf.ServerPort))
+	r.Run(fmt.Sprintf(":%d", config.Server.Port))
 }

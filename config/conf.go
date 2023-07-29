@@ -6,10 +6,21 @@ import (
 	"github.com/spf13/viper"
 )
 
-// 全局变量，用于保存viper读取到的
-var Conf struct {
-	ServerPort int
+type server struct {
+	Port int
 }
+
+type mysql struct {
+	Port     int
+	Host     string
+	User     string
+	Password string
+	Database string
+}
+
+// 全局变量，用于保存viper读取到的
+var Server *server
+var Mysql *mysql
 
 func init() {
 	viper.SetConfigName("app")  //设置配置文件名
@@ -22,5 +33,16 @@ func init() {
 		panic(fmt.Errorf("配置文件读写出错：%v", err))
 	}
 	//填入读取到的值
-	Conf.ServerPort = viper.GetInt("server.port")
+	Server.Port = viper.GetInt("server.port")
+
+	Mysql.Database = viper.GetString("mysql.database")
+	Mysql.Host = viper.GetString("mysql.host")
+	Mysql.Password = viper.GetString("mysql.password")
+	Mysql.Port = viper.GetInt("mysql.port")
+	Mysql.User = viper.GetString("mysql.user")
+}
+
+// Mysql配置struct返回dsn字符串，便于之后连接数据库
+func (m *mysql) DSN() string {
+	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local", m.User, m.Password, m.Host, m.Port, m.Database)
 }
