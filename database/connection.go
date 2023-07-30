@@ -18,6 +18,6 @@ func init() {
 		panic(fmt.Errorf("数据库连接失败：%v", err))
 	}
 	//自动迁移
-	db.AutoMigrate(&models.User{})
+	db.AutoMigrate(&models.User{}, &models.Video{})
 	Handler = db
 }

@@ -5,14 +5,14 @@ package routes
 
 import (
 	"app/controllers"
-	middleware "app/middlewares"
 
 	"github.com/gin-gonic/gin"
 )
 
 // 注册路由
 func loadBase(e *gin.Engine) {
-	e.POST("/douyin/user/register/", middleware.CheckUserQuery, controllers.Register)
-	e.POST("/douyin/user/login/", middleware.CheckUserQuery, controllers.Login)
-	e.GET("/douyin/user/", middleware.JWT(), controllers.UserInfo)
+	e.POST("/douyin/user/register/", controllers.Register)
+	e.POST("/douyin/user/login/", controllers.Login)
+	e.GET("/douyin/user/", controllers.UserInfo)
+	e.POST("/douyin/publish/action/", controllers.PublishVideo)
 }
