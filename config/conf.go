@@ -23,6 +23,8 @@ var Server *server
 var Mysql *mysql
 
 func init() {
+	Server = new(server)
+	Mysql = new(mysql)
 	viper.SetConfigName("app")  //设置配置文件名
 	viper.SetConfigType("toml") //设置配置文件后缀
 	viper.AddConfigPath(".")    //设置配置文件路径

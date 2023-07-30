@@ -11,5 +11,5 @@ import (
 
 // 注册路由
 func loadBase(e *gin.Engine) {
-	e.GET("/", controllers.Hello)
+	e.POST("/register", controllers.Register)
 }
