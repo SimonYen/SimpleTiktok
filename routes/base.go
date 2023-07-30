@@ -12,6 +12,6 @@ import (
 
 // 注册路由
 func loadBase(e *gin.Engine) {
-	e.POST("/douyin/user/register", middleware.CheckUserQuery, controllers.Register)
-	e.POST("/douyin/user/login", middleware.CheckUserQuery, controllers.Login)
+	e.POST("/douyin/user/register/", middleware.CheckUserQuery, controllers.Register)
+	e.POST("/douyin/user/login/", middleware.CheckUserQuery, controllers.Login)
 }
