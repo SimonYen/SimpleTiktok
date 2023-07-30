@@ -84,7 +84,42 @@ func Login(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"status_code": 0,
 		"status_msg":  "登录成功，欢迎您。",
-		"user_id":     u.Id,
+		"user_id":     u_in_database.Id,
 		"token":       t,
+	})
+}
+
+// 用户信息，我的理解是token是鉴权，看当前是否为登录用户，id才是需要了解的用户详情的id
+func UserInfo(c *gin.Context) {
+	user_id := c.Query("user_id")
+	//查询数据库
+	u := new(models.User)
+	database.Handler.Where("id = ?", user_id).First(u)
+	if u.Id == 0 {
+		c.JSON(200, gin.H{
+			"status_code": 1,
+			"status_msg":  fmt.Sprintf("查询出错，没有id为%v的用户！", user_id),
+			"user":        "",
+		})
+		c.Abort()
+		return
+	}
+	c.JSON(200, gin.H{
+		"status_code": 0,
+		"status_msg":  "查询成功",
+		// "user": gin.H{
+		// 	"id":               u.Id,
+		// 	"name":             u.Username,
+		// 	"follow_count":     0,
+		// 	"follower_count":   0,
+		// 	"is_follow":        true,
+		// 	"avatar":           "",
+		// 	"background_image": "",
+		// 	"signature":        "",
+		// 	"total_favorited":  "",
+		// 	"work_count":       0,
+		// 	"favorite_count":   0,
+		// },
+		"user": nil,
 	})
 }
