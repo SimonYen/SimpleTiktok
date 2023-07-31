@@ -1,10 +1,9 @@
 package models
 
 type Video struct {
-	Id    uint
-	Title string `gorm:"not null"`
-	//视频文件存放路径
-	Path string `gorm:"not null;unique"`
+	Id        uint
+	Title     string `gorm:"not null"`
+	Extension string
 	//外键
 	UserID      uint
 	User        User

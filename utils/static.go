@@ -21,6 +21,8 @@ func LoadStatic(e *gin.Engine) {
 	createdIfNotExist("./public/avatar")
 	createdIfNotExist("./public/background")
 	createdIfNotExist("./public/video")
+	createdIfNotExist("./public/screenshot")
+
 	//设置为静态文件夹
 	e.Static("/public", "./public")
 }

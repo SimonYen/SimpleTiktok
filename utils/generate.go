@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"os"
 
+	"github.com/mowshon/moviego"
 	"github.com/nullrocks/identicon"
 	"github.com/szeliga/goray/engine"
 )
@@ -43,4 +44,10 @@ func GenerateAvatar(username string, id uint) {
 	defer file.Close()
 	//写入图片
 	img.Png(300, file)
+}
+
+// 为视频生成封面
+func GenerateCover(id uint, p string) {
+	video, _ := moviego.Load("./" + p)
+	video.Screenshot(0, fmt.Sprintf("./public/screenshot/%d.png", id))
 }

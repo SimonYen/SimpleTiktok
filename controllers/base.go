@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 // 注册
@@ -171,9 +170,6 @@ func PublishVideo(c *gin.Context) {
 		c.Abort()
 		return
 	}
-	//生成UUID
-	u_id := uuid.New()
-	key := u_id.String()
 	//获取文件
 	file, err := c.FormFile("data")
 	if err != nil {
@@ -186,8 +182,16 @@ func PublishVideo(c *gin.Context) {
 	}
 	//截取文件扩展名
 	ext := filepath.Ext(file.Filename)
-	//合成文件保存路径：public/uuid.ext
-	p := fmt.Sprintf("public/video/%s.%s", key, ext)
+	//数据库新建记录
+	video := models.Video{
+		Title:       title,
+		UserID:      claim.Id,
+		Extension:   ext,
+		CreatedTime: time.Now().Unix(),
+	}
+	database.Handler.Create(&video)
+	//合成文件保存路径：public/video/id.ext
+	p := fmt.Sprintf("public/video/%d%s", video.Id, ext)
 	//保存文件
 	err = c.SaveUploadedFile(file, "./"+p)
 	if err != nil {
@@ -198,14 +202,8 @@ func PublishVideo(c *gin.Context) {
 		c.Abort()
 		return
 	}
-	//数据库新建记录
-	video := models.Video{
-		Path:        p,
-		Title:       title,
-		UserID:      claim.Id,
-		CreatedTime: time.Now().Unix(),
-	}
-	database.Handler.Create(&video)
+	//为视频生成封面
+	utils.GenerateCover(video.Id, p)
 	c.JSON(200, gin.H{
 		"status_code": 0,
 		"status_msg":  fmt.Sprintf("%s视频上传成功。", title),
@@ -226,7 +224,9 @@ func VideoFeed(c *gin.Context) {
 	if len(videos) == 0 {
 		c.JSON(200, gin.H{
 			"status_code": 1,
-			"status_msg":  "数据库中没有符合条件的视频",
+			"status_msg":  "没有新的视频了",
+			"next_time":   nil,
+			"video_list":  nil,
 		})
 		c.Abort()
 		return
@@ -252,8 +252,8 @@ func VideoFeed(c *gin.Context) {
 				TotalFavorited:  "0",
 				WorkCount:       0,
 			},
-			PlayURL:       fmt.Sprintf("%s:%d/%s", config.Server.Host, config.Server.Port, video.Path),
-			CoverURL:      fmt.Sprintf("%s:%d/public/background/%d.png", config.Server.Host, config.Server.Port, u.Id),
+			PlayURL:       fmt.Sprintf("%s:%d/public/video/%d%s", config.Server.Host, config.Server.Port, video.Id, video.Extension),
+			CoverURL:      fmt.Sprintf("%s:%d/public/screenshot/%d.png", config.Server.Host, config.Server.Port, video.Id),
 			FavoriteCount: 0,
 			CommentCount:  0,
 			IsFavorite:    false,
@@ -265,6 +265,82 @@ func VideoFeed(c *gin.Context) {
 		"status_code": 0,
 		"status_msg":  "获取视频流成功。",
 		"video_list":  video_jsons,
-		"next_time":   videos[len(videos)-1].CreatedTime,
+		"next_time":   videos[len(videos)-1].CreatedTime, //要不然不能循环刷
+	})
+}
+
+func OwnPulishedVideo(c *gin.Context) {
+	//获取token
+	tokenString := c.Query("token")
+	//检查token
+	if !utils.CheckToken(tokenString) {
+		c.JSON(200, gin.H{
+			"status_code": 1,
+			"status_msg":  "token已失效！",
+			"video_list":  nil,
+		})
+		c.Abort()
+		return
+	}
+	//解析token
+	claim, _ := utils.ParseToken(tokenString)
+	//获取user_id
+	user_id, _ := strconv.Atoi(c.Query("user_id"))
+	if user_id != int(claim.Id) {
+		c.JSON(200, gin.H{
+			"status_code": 1,
+			"status_msg":  "token与本人id不符！",
+			"video_list":  nil,
+		})
+		c.Abort()
+		return
+	}
+	//数据库中查询所有符合条件的video
+	var videos []models.Video
+	database.Handler.Where("user_id = ?", user_id).Find(&videos)
+
+	if len(videos) == 0 {
+		c.JSON(200, gin.H{
+			"status_code": 1,
+			"status_msg":  "您没有发布视频。",
+			"video_list":  nil,
+		})
+		c.Abort()
+		return
+	}
+	video_jsons := make([]models.VideoJSON, 0, 30)
+	for _, video := range videos {
+		//查询视频作者信息
+		var u models.User
+		database.Handler.Where("id = ?", video.UserID).First(&u)
+		//将相关信息填入结构体中
+		v := models.VideoJSON{
+			ID: video.Id,
+			Author: models.UserJSON{
+				Avatar:          fmt.Sprintf("%s:%d/public/avatar/%d.png", config.Server.Host, config.Server.Port, u.Id),
+				BackgroundImage: fmt.Sprintf("%s:%d/public/background/%d.png", config.Server.Host, config.Server.Port, u.Id),
+				FavoriteCount:   0,
+				FollowCount:     0,
+				FollowerCount:   0,
+				ID:              u.Id,
+				IsFollow:        false,
+				Name:            u.Username,
+				Signature:       "Simon冲冲冲",
+				TotalFavorited:  "0",
+				WorkCount:       0,
+			},
+			PlayURL:       fmt.Sprintf("%s:%d/public/video/%d%s", config.Server.Host, config.Server.Port, video.Id, video.Extension),
+			CoverURL:      fmt.Sprintf("%s:%d/public/screenshot/%d.png", config.Server.Host, config.Server.Port, video.Id),
+			FavoriteCount: 0,
+			CommentCount:  0,
+			IsFavorite:    false,
+			Title:         video.Title,
+		}
+		video_jsons = append(video_jsons, v)
+	}
+	c.JSON(200, gin.H{
+		"status_code": 0,
+		"status_msg":  "获取视频流成功。",
+		"video_list":  video_jsons,
 	})
 }
