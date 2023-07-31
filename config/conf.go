@@ -8,6 +8,7 @@ import (
 
 type server struct {
 	Port int
+	Host string
 }
 
 type mysql struct {
@@ -36,6 +37,7 @@ func init() {
 	}
 	//填入读取到的值
 	Server.Port = viper.GetInt("server.port")
+	Server.Host = viper.GetString("server.host")
 
 	Mysql.Database = viper.GetString("mysql.database")
 	Mysql.Host = viper.GetString("mysql.host")

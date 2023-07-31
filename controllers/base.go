@@ -4,6 +4,7 @@
 package controllers
 
 import (
+	"app/config"
 	"app/database"
 	"app/models"
 	"app/utils"
@@ -43,6 +44,8 @@ func Register(c *gin.Context) {
 		c.Abort()
 		return
 	}
+	//生成随机渐变背景图
+	utils.GenerateBackground(u.Id)
 	//生成token
 	t, _ := utils.GenerateToken(u.Username, u.Password, u.Id)
 	c.JSON(200, gin.H{
@@ -119,22 +122,22 @@ func UserInfo(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{
-		// "status_code": 0,
-		// "status_msg":  "查询成功",
-		// "user": gin.H{
-		// 	"id":               u.Id,
-		// 	"name":             u.Username,
-		// 	"follow_count":     0,
-		// 	"follower_count":   0,
-		// 	"is_follow":        true,
-		// 	"avatar":           "",
-		// 	"background_image": "",
-		// 	"signature":        "无",
-		// 	"total_favorited":  "0",
-		// 	"work_count":       0,
-		// 	"favorite_count":   0,
-		// },
-		"user": nil,
+		"status_code": 0,
+		"status_msg":  "查询成功",
+		"user": gin.H{
+			"id":               u.Id,
+			"name":             u.Username,
+			"follow_count":     0,
+			"follower_count":   0,
+			"is_follow":        true,
+			"avatar":           fmt.Sprintf("%s:%d/public/background/%d.png", config.Server.Host, config.Server.Port, u.Id),
+			"background_image": fmt.Sprintf("%s:%d/public/background/%d.png", config.Server.Host, config.Server.Port, u.Id),
+			"signature":        "Golang冲冲冲",
+			"total_favorited":  "0",
+			"work_count":       0,
+			"favorite_count":   0,
+		},
+		//"user": nil,
 	})
 }
 
@@ -154,7 +157,7 @@ func PublishVideo(c *gin.Context) {
 		return
 	}
 	//解析token
-	claim, err := utils.ParseToken(tokenString)
+	claim, _ := utils.ParseToken(tokenString)
 	//检查是否为空
 	if title == "" {
 		c.JSON(200, gin.H{
@@ -180,7 +183,7 @@ func PublishVideo(c *gin.Context) {
 	//截取文件扩展名
 	ext := filepath.Ext(file.Filename)
 	//合成文件保存路径：public/uuid.ext
-	p := fmt.Sprintf("public/%s.%s", key, ext)
+	p := fmt.Sprintf("public/video/%s.%s", key, ext)
 	//保存文件
 	err = c.SaveUploadedFile(file, "./"+p)
 	if err != nil {
