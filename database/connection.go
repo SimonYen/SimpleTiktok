@@ -19,5 +19,5 @@ func init() {
 	}
 	//自动迁移
 	db.AutoMigrate(&models.User{}, &models.Video{})
-	Handler = db
+	Handler = db.Debug()
 }

@@ -10,6 +10,8 @@ import (
 	"app/utils"
 	"fmt"
 	"path/filepath"
+	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -104,7 +106,7 @@ func UserInfo(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"status_code": 1,
 			"status_msg":  "token已失效",
-			"user":        "",
+			"user":        nil,
 		})
 		c.Abort()
 		return
@@ -118,7 +120,7 @@ func UserInfo(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"status_code": 1,
 			"status_msg":  fmt.Sprintf("查询出错，没有id为%v的用户！", user_id),
-			"user":        "",
+			"user":        nil,
 		})
 		c.Abort()
 		return
@@ -126,18 +128,18 @@ func UserInfo(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"status_code": 0,
 		"status_msg":  "查询成功",
-		"user": gin.H{
-			"id":               u.Id,
-			"name":             u.Username,
-			"follow_count":     0,
-			"follower_count":   0,
-			"is_follow":        true,
-			"avatar":           fmt.Sprintf("%s:%d/public/avatar/%d.png", config.Server.Host, config.Server.Port, u.Id),
-			"background_image": fmt.Sprintf("%s:%d/public/background/%d.png", config.Server.Host, config.Server.Port, u.Id),
-			"signature":        "Golang冲冲冲",
-			"total_favorited":  "0",
-			"work_count":       0,
-			"favorite_count":   0,
+		"user": models.UserJSON{
+			Avatar:          fmt.Sprintf("%s:%d/public/avatar/%d.png", config.Server.Host, config.Server.Port, u.Id),
+			BackgroundImage: fmt.Sprintf("%s:%d/public/background/%d.png", config.Server.Host, config.Server.Port, u.Id),
+			FavoriteCount:   0,
+			FollowCount:     0,
+			FollowerCount:   0,
+			ID:              u.Id,
+			IsFollow:        false,
+			Name:            u.Username,
+			Signature:       "Simon冲冲冲",
+			TotalFavorited:  "0",
+			WorkCount:       0,
 		},
 		//"user": nil,
 	})
@@ -197,14 +199,72 @@ func PublishVideo(c *gin.Context) {
 		return
 	}
 	//数据库新建记录
-	v := models.Video{
-		Path:   p,
-		Title:  title,
-		UserID: claim.Id,
+	video := models.Video{
+		Path:        p,
+		Title:       title,
+		UserID:      claim.Id,
+		CreatedTime: time.Now().Unix(),
 	}
-	database.Handler.Create(&v)
+	database.Handler.Create(&video)
 	c.JSON(200, gin.H{
 		"status_code": 0,
 		"status_msg":  fmt.Sprintf("%s视频上传成功。", title),
+	})
+}
+
+// 视频流接口
+func VideoFeed(c *gin.Context) {
+	//感觉token没必要获取
+	//获取latest_time
+	lt := c.Query("latest_time")
+	now := time.Now().Unix()
+	latest_time, _ := strconv.Atoi(lt)
+	//数据库中查询所有符合条件的video
+	var videos []models.Video
+	database.Handler.Where("created_time > ? and created_time < ?", latest_time, now).Order("created_time desc").Limit(30).Find(&videos)
+
+	if len(videos) == 0 {
+		c.JSON(200, gin.H{
+			"status_code": 1,
+			"status_msg":  "数据库中没有符合条件的视频",
+		})
+		c.Abort()
+		return
+	}
+	video_jsons := make([]models.VideoJSON, 0, 30)
+	for _, video := range videos {
+		//查询视频作者信息
+		var u models.User
+		database.Handler.Where("id = ?", video.UserID).First(&u)
+		//将相关信息填入结构体中
+		v := models.VideoJSON{
+			ID: video.Id,
+			Author: models.UserJSON{
+				Avatar:          fmt.Sprintf("%s:%d/public/avatar/%d.png", config.Server.Host, config.Server.Port, u.Id),
+				BackgroundImage: fmt.Sprintf("%s:%d/public/background/%d.png", config.Server.Host, config.Server.Port, u.Id),
+				FavoriteCount:   0,
+				FollowCount:     0,
+				FollowerCount:   0,
+				ID:              u.Id,
+				IsFollow:        false,
+				Name:            u.Username,
+				Signature:       "Simon冲冲冲",
+				TotalFavorited:  "0",
+				WorkCount:       0,
+			},
+			PlayURL:       fmt.Sprintf("%s:%d/%s", config.Server.Host, config.Server.Port, video.Path),
+			CoverURL:      fmt.Sprintf("%s:%d/public/background/%d.png", config.Server.Host, config.Server.Port, u.Id),
+			FavoriteCount: 0,
+			CommentCount:  0,
+			IsFavorite:    false,
+			Title:         video.Title,
+		}
+		video_jsons = append(video_jsons, v)
+	}
+	c.JSON(200, gin.H{
+		"status_code": 0,
+		"status_msg":  "获取视频流成功。",
+		"video_list":  video_jsons,
+		"next_time":   videos[len(videos)-1].CreatedTime,
 	})
 }

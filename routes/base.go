@@ -15,4 +15,5 @@ func loadBase(e *gin.Engine) {
 	e.POST("/douyin/user/login/", controllers.Login)
 	e.GET("/douyin/user/", controllers.UserInfo)
 	e.POST("/douyin/publish/action/", controllers.PublishVideo)
+	e.GET("/douyin/feed/", controllers.VideoFeed)
 }
