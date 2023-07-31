@@ -46,6 +46,8 @@ func Register(c *gin.Context) {
 	}
 	//生成随机渐变背景图
 	utils.GenerateBackground(u.Id)
+	//生成GitHub风格头像
+	utils.GenerateAvatar(u.Username, u.Id)
 	//生成token
 	t, _ := utils.GenerateToken(u.Username, u.Password, u.Id)
 	c.JSON(200, gin.H{
@@ -130,7 +132,7 @@ func UserInfo(c *gin.Context) {
 			"follow_count":     0,
 			"follower_count":   0,
 			"is_follow":        true,
-			"avatar":           fmt.Sprintf("%s:%d/public/background/%d.png", config.Server.Host, config.Server.Port, u.Id),
+			"avatar":           fmt.Sprintf("%s:%d/public/avatar/%d.png", config.Server.Host, config.Server.Port, u.Id),
 			"background_image": fmt.Sprintf("%s:%d/public/background/%d.png", config.Server.Host, config.Server.Port, u.Id),
 			"signature":        "Golang冲冲冲",
 			"total_favorited":  "0",

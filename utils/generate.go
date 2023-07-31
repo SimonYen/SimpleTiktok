@@ -5,7 +5,9 @@ import (
 	"image/color"
 	"math"
 	"math/rand"
+	"os"
 
+	"github.com/nullrocks/identicon"
 	"github.com/szeliga/goray/engine"
 )
 
@@ -26,4 +28,19 @@ func GenerateBackground(id uint) {
 		}
 	})
 	scene.Save(fmt.Sprintf("./public/background/%d.png", id))
+}
+
+// 根据用户名生成头像（类似于github默认随机头像的那种）
+func GenerateAvatar(username string, id uint) {
+	gen, _ := identicon.New(
+		"github",
+		5,
+		3,
+	)
+	img, _ := gen.Draw(username)
+	//新建文件
+	file, _ := os.Create(fmt.Sprintf("./public/avatar/%d.png", id))
+	defer file.Close()
+	//写入图片
+	img.Png(300, file)
 }
