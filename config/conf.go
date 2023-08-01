@@ -19,13 +19,20 @@ type mysql struct {
 	Database string
 }
 
+type redis struct {
+	Port int
+	Host string
+}
+
 // 全局变量，用于保存viper读取到的
 var Server *server
 var Mysql *mysql
+var Redis *redis
 
 func init() {
 	Server = new(server)
 	Mysql = new(mysql)
+	Redis = new(redis)
 	viper.SetConfigName("app")  //设置配置文件名
 	viper.SetConfigType("toml") //设置配置文件后缀
 	viper.AddConfigPath(".")    //设置配置文件路径
@@ -44,6 +51,9 @@ func init() {
 	Mysql.Password = viper.GetString("mysql.password")
 	Mysql.Port = viper.GetInt("mysql.port")
 	Mysql.User = viper.GetString("mysql.user")
+
+	Redis.Host = viper.GetString("redis.host")
+	Redis.Port = viper.GetInt("redis.port")
 }
 
 // Mysql配置struct返回dsn字符串，便于之后连接数据库

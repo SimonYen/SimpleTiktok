@@ -124,21 +124,29 @@ func UserInfo(c *gin.Context) {
 		c.Abort()
 		return
 	}
+	//查找用户发布的视频
+	var videos []models.Video
+	database.Handler.Where("user_id = ?", u.Id).Find(&videos)
+	like_sum := 0
+	//计算每个视频的获赞量
+	for _, video := range videos {
+		like_sum += int(utils.GetVideoLikeCount(video.Id))
+	}
 	c.JSON(200, gin.H{
 		"status_code": 0,
 		"status_msg":  "查询成功",
 		"user": models.UserJSON{
 			Avatar:          fmt.Sprintf("%s:%d/public/avatar/%d.png", config.Server.Host, config.Server.Port, u.Id),
 			BackgroundImage: fmt.Sprintf("%s:%d/public/background/%d.png", config.Server.Host, config.Server.Port, u.Id),
-			FavoriteCount:   0,
+			FavoriteCount:   int64(like_sum),
 			FollowCount:     0,
 			FollowerCount:   0,
 			ID:              u.Id,
 			IsFollow:        false,
 			Name:            u.Username,
-			Signature:       "Simon冲冲冲",
-			TotalFavorited:  "0",
-			WorkCount:       0,
+			Signature:       "Hello World!",
+			TotalFavorited:  strconv.Itoa(like_sum),
+			WorkCount:       int64(len(videos)),
 		},
 		//"user": nil,
 	})
@@ -212,7 +220,19 @@ func PublishVideo(c *gin.Context) {
 
 // 视频流接口
 func VideoFeed(c *gin.Context) {
-	//感觉token没必要获取
+	//从token获取当前user_id
+	tokenString := c.Query("token")
+	if !utils.CheckToken(tokenString) {
+		c.JSON(200, gin.H{
+			"status_code": 1,
+			"status_msg":  "token校验失效",
+			"next_time":   nil,
+			"video_list":  nil,
+		})
+		c.Abort()
+		return
+	}
+	claim, _ := utils.ParseToken(tokenString)
 	//获取latest_time
 	lt := c.Query("latest_time")
 	now := time.Now().Unix()
@@ -236,27 +256,34 @@ func VideoFeed(c *gin.Context) {
 		//查询视频作者信息
 		var u models.User
 		database.Handler.Where("id = ?", video.UserID).First(&u)
+		var all_videos []models.Video
+		database.Handler.Where("user_id = ?", u.Id).Find(&all_videos)
+		//计算总的获赞数
+		like_sum := 0
+		for _, tmp := range all_videos {
+			like_sum += int(utils.GetVideoLikeCount(tmp.Id))
+		}
 		//将相关信息填入结构体中
 		v := models.VideoJSON{
 			ID: video.Id,
 			Author: models.UserJSON{
 				Avatar:          fmt.Sprintf("%s:%d/public/avatar/%d.png", config.Server.Host, config.Server.Port, u.Id),
 				BackgroundImage: fmt.Sprintf("%s:%d/public/background/%d.png", config.Server.Host, config.Server.Port, u.Id),
-				FavoriteCount:   0,
+				FavoriteCount:   int64(like_sum),
 				FollowCount:     0,
 				FollowerCount:   0,
 				ID:              u.Id,
 				IsFollow:        false,
 				Name:            u.Username,
-				Signature:       "Simon冲冲冲",
-				TotalFavorited:  "0",
-				WorkCount:       0,
+				Signature:       "Hello World!",
+				TotalFavorited:  strconv.Itoa(like_sum),
+				WorkCount:       int64(len(all_videos)),
 			},
 			PlayURL:       fmt.Sprintf("%s:%d/public/video/%d%s", config.Server.Host, config.Server.Port, video.Id, video.Extension),
 			CoverURL:      fmt.Sprintf("%s:%d/public/screenshot/%d.png", config.Server.Host, config.Server.Port, video.Id),
-			FavoriteCount: 0,
+			FavoriteCount: utils.GetVideoLikeCount(video.Id),
 			CommentCount:  0,
-			IsFavorite:    false,
+			IsFavorite:    utils.VideoIsLiked(video.Id, claim.Id),
 			Title:         video.Title,
 		}
 		video_jsons = append(video_jsons, v)
@@ -308,8 +335,12 @@ func OwnPulishedVideo(c *gin.Context) {
 		c.Abort()
 		return
 	}
+
+	//计算总的获赞数
+	like_sum := 0
 	video_jsons := make([]models.VideoJSON, 0, 30)
 	for _, video := range videos {
+		like_sum += int(utils.GetVideoLikeCount(video.Id))
 		//查询视频作者信息
 		var u models.User
 		database.Handler.Where("id = ?", video.UserID).First(&u)
@@ -319,19 +350,19 @@ func OwnPulishedVideo(c *gin.Context) {
 			Author: models.UserJSON{
 				Avatar:          fmt.Sprintf("%s:%d/public/avatar/%d.png", config.Server.Host, config.Server.Port, u.Id),
 				BackgroundImage: fmt.Sprintf("%s:%d/public/background/%d.png", config.Server.Host, config.Server.Port, u.Id),
-				FavoriteCount:   0,
+				FavoriteCount:   int64(like_sum),
 				FollowCount:     0,
 				FollowerCount:   0,
 				ID:              u.Id,
-				IsFollow:        false,
+				IsFollow:        true,
 				Name:            u.Username,
-				Signature:       "Simon冲冲冲",
-				TotalFavorited:  "0",
-				WorkCount:       0,
+				Signature:       "Hello World!",
+				TotalFavorited:  strconv.Itoa(like_sum),
+				WorkCount:       int64(len(videos)),
 			},
 			PlayURL:       fmt.Sprintf("%s:%d/public/video/%d%s", config.Server.Host, config.Server.Port, video.Id, video.Extension),
 			CoverURL:      fmt.Sprintf("%s:%d/public/screenshot/%d.png", config.Server.Host, config.Server.Port, video.Id),
-			FavoriteCount: 0,
+			FavoriteCount: utils.GetVideoLikeCount(video.Id),
 			CommentCount:  0,
 			IsFavorite:    false,
 			Title:         video.Title,
