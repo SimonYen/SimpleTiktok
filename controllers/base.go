@@ -138,7 +138,7 @@ func UserInfo(c *gin.Context) {
 		"user": models.UserJSON{
 			Avatar:          fmt.Sprintf("%s:%d/public/avatar/%d.png", config.Server.Host, config.Server.Port, u.Id),
 			BackgroundImage: fmt.Sprintf("%s:%d/public/background/%d.png", config.Server.Host, config.Server.Port, u.Id),
-			FavoriteCount:   int64(like_sum),
+			FavoriteCount:   utils.GetUserLikedVideoCount(u.Id),
 			FollowCount:     0,
 			FollowerCount:   0,
 			ID:              u.Id,
@@ -269,7 +269,7 @@ func VideoFeed(c *gin.Context) {
 			Author: models.UserJSON{
 				Avatar:          fmt.Sprintf("%s:%d/public/avatar/%d.png", config.Server.Host, config.Server.Port, u.Id),
 				BackgroundImage: fmt.Sprintf("%s:%d/public/background/%d.png", config.Server.Host, config.Server.Port, u.Id),
-				FavoriteCount:   int64(like_sum),
+				FavoriteCount:   utils.GetUserLikedVideoCount(u.Id),
 				FollowCount:     0,
 				FollowerCount:   0,
 				ID:              u.Id,
@@ -350,7 +350,7 @@ func OwnPulishedVideo(c *gin.Context) {
 			Author: models.UserJSON{
 				Avatar:          fmt.Sprintf("%s:%d/public/avatar/%d.png", config.Server.Host, config.Server.Port, u.Id),
 				BackgroundImage: fmt.Sprintf("%s:%d/public/background/%d.png", config.Server.Host, config.Server.Port, u.Id),
-				FavoriteCount:   int64(like_sum),
+				FavoriteCount:   utils.GetUserLikedVideoCount(u.Id),
 				FollowCount:     0,
 				FollowerCount:   0,
 				ID:              u.Id,
