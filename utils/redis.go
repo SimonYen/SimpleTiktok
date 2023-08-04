@@ -25,8 +25,9 @@ import (
 
 	u1关注u2：sadd follow:u1 u2 ; sadd followed:u2 u1
 	u1取消关注u2：srem follow:u1 u2 ; srem followed:u2 u1
+	u1是否关注u2：sismember followed:u2 u1
 	用户的关注列表：smembers follow:user_id
-	用户的粉丝列表：smembers follwoed:user_id
+	用户的粉丝列表：smembers followed:user_id
 	用户的好友列表：sinter follow:user_id followed:user_id （好友的定义是互相关注，所以取交集就行了)
 
 */
@@ -118,6 +119,64 @@ func FollowOrUnfollowUser(follower, followee uint, action_type int) bool {
 		if err != nil {
 			res = false
 		}
+	}
+	return res
+}
+
+// u1是否关注u2
+func IsFollowed(u1, u2 uint) bool {
+	key := fmt.Sprintf("followed:%d", u2)
+	res, _ := database.RDB.SIsMember(database.CTX, key, strconv.Itoa(int(u1))).Result()
+	return res
+}
+
+// 用户关注列表
+func GetFollowList(user_id uint) []string {
+	key := fmt.Sprintf("follow:%d", user_id)
+	res, err := database.RDB.SMembers(database.CTX, key).Result()
+	if err != nil {
+		return nil
+	}
+	return res
+}
+
+// 用户粉丝列表
+func GetFollowedList(user_id uint) []string {
+	key := fmt.Sprintf("followed:%d", user_id)
+	res, err := database.RDB.SMembers(database.CTX, key).Result()
+	if err != nil {
+		return nil
+	}
+	return res
+}
+
+// 用户好友列表
+func GetFriendList(user_id uint) []string {
+	key1 := fmt.Sprintf("follow:%d", user_id)
+	key2 := fmt.Sprintf("followed:%d", user_id)
+	res, err := database.RDB.SInter(database.CTX, key1, key2).Result()
+	if err != nil {
+		return nil
+	}
+	return res
+}
+
+// 用户的关注数量
+func GetFollowCount(user_id uint) int64 {
+	key := fmt.Sprintf("follow:%d", user_id)
+	res, err := database.RDB.SCard(database.CTX, key).Result()
+	if err != nil {
+		return 0
+	}
+	return res
+}
+
+// 用户的粉丝数量
+func GetFollowedCount(user_id uint) int64 {
+	key := fmt.Sprintf("followed:%d", user_id)
+	res, err := database.RDB.SCard(database.CTX, key).Result()
+	if err != nil {
+		return 0
 	}
 	return res
 }

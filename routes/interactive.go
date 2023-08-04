@@ -11,4 +11,5 @@ import (
 
 func loadInteractive(e *gin.Engine) {
 	e.POST("/douyin/favorite/action/", controllers.VideoLike)
+	e.GET("/douyin/favorite/list/", controllers.GetLikeList)
 }

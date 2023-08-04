@@ -4,7 +4,7 @@
 package controllers
 
 import (
-	"app/config"
+	"app/construct"
 	"app/database"
 	"app/models"
 	"app/utils"
@@ -110,44 +110,13 @@ func UserInfo(c *gin.Context) {
 		c.Abort()
 		return
 	}
-
-	user_id := c.Query("user_id")
-	//查询数据库
-	u := new(models.User)
-	database.Handler.Where("id = ?", user_id).First(u)
-	if u.Id == 0 {
-		c.JSON(200, gin.H{
-			"status_code": 1,
-			"status_msg":  fmt.Sprintf("查询出错，没有id为%v的用户！", user_id),
-			"user":        nil,
-		})
-		c.Abort()
-		return
-	}
-	//查找用户发布的视频
-	var videos []models.Video
-	database.Handler.Where("user_id = ?", u.Id).Find(&videos)
-	like_sum := 0
-	//计算每个视频的获赞量
-	for _, video := range videos {
-		like_sum += int(utils.GetVideoLikeCount(video.Id))
-	}
+	claim, _ := utils.ParseToken(token)
+	user_id_str := c.Query("user_id")
+	user_id, _ := strconv.Atoi(user_id_str)
 	c.JSON(200, gin.H{
 		"status_code": 0,
 		"status_msg":  "查询成功",
-		"user": models.UserJSON{
-			Avatar:          fmt.Sprintf("%s:%d/public/avatar/%d.png", config.Server.Host, config.Server.Port, u.Id),
-			BackgroundImage: fmt.Sprintf("%s:%d/public/background/%d.png", config.Server.Host, config.Server.Port, u.Id),
-			FavoriteCount:   utils.GetUserLikedVideoCount(u.Id),
-			FollowCount:     0,
-			FollowerCount:   0,
-			ID:              u.Id,
-			IsFollow:        false,
-			Name:            u.Username,
-			Signature:       "Hello World!",
-			TotalFavorited:  strconv.Itoa(like_sum),
-			WorkCount:       int64(len(videos)),
-		},
+		"user":        construct.UserJSON(uint(user_id), claim.Id),
 		//"user": nil,
 	})
 }
@@ -253,39 +222,8 @@ func VideoFeed(c *gin.Context) {
 	}
 	video_jsons := make([]models.VideoJSON, 0, 30)
 	for _, video := range videos {
-		//查询视频作者信息
-		var u models.User
-		database.Handler.Where("id = ?", video.UserID).First(&u)
-		var all_videos []models.Video
-		database.Handler.Where("user_id = ?", u.Id).Find(&all_videos)
-		//计算总的获赞数
-		like_sum := 0
-		for _, tmp := range all_videos {
-			like_sum += int(utils.GetVideoLikeCount(tmp.Id))
-		}
 		//将相关信息填入结构体中
-		v := models.VideoJSON{
-			ID: video.Id,
-			Author: models.UserJSON{
-				Avatar:          fmt.Sprintf("%s:%d/public/avatar/%d.png", config.Server.Host, config.Server.Port, u.Id),
-				BackgroundImage: fmt.Sprintf("%s:%d/public/background/%d.png", config.Server.Host, config.Server.Port, u.Id),
-				FavoriteCount:   utils.GetUserLikedVideoCount(u.Id),
-				FollowCount:     0,
-				FollowerCount:   0,
-				ID:              u.Id,
-				IsFollow:        false,
-				Name:            u.Username,
-				Signature:       "Hello World!",
-				TotalFavorited:  strconv.Itoa(like_sum),
-				WorkCount:       int64(len(all_videos)),
-			},
-			PlayURL:       fmt.Sprintf("%s:%d/public/video/%d%s", config.Server.Host, config.Server.Port, video.Id, video.Extension),
-			CoverURL:      fmt.Sprintf("%s:%d/public/screenshot/%d.png", config.Server.Host, config.Server.Port, video.Id),
-			FavoriteCount: utils.GetVideoLikeCount(video.Id),
-			CommentCount:  0,
-			IsFavorite:    utils.VideoIsLiked(video.Id, claim.Id),
-			Title:         video.Title,
-		}
+		v := construct.VideoJSON(video.Id, claim.Id)
 		video_jsons = append(video_jsons, v)
 	}
 	c.JSON(200, gin.H{
@@ -313,15 +251,6 @@ func OwnPulishedVideo(c *gin.Context) {
 	claim, _ := utils.ParseToken(tokenString)
 	//获取user_id
 	user_id, _ := strconv.Atoi(c.Query("user_id"))
-	if user_id != int(claim.Id) {
-		c.JSON(200, gin.H{
-			"status_code": 1,
-			"status_msg":  "token与本人id不符！",
-			"video_list":  nil,
-		})
-		c.Abort()
-		return
-	}
 	//数据库中查询所有符合条件的video
 	var videos []models.Video
 	database.Handler.Where("user_id = ?", user_id).Find(&videos)
@@ -329,44 +258,16 @@ func OwnPulishedVideo(c *gin.Context) {
 	if len(videos) == 0 {
 		c.JSON(200, gin.H{
 			"status_code": 1,
-			"status_msg":  "您没有发布视频。",
+			"status_msg":  "没有发布视频。",
 			"video_list":  nil,
 		})
 		c.Abort()
 		return
 	}
-
-	//计算总的获赞数
-	like_sum := 0
 	video_jsons := make([]models.VideoJSON, 0, 30)
 	for _, video := range videos {
-		like_sum += int(utils.GetVideoLikeCount(video.Id))
-		//查询视频作者信息
-		var u models.User
-		database.Handler.Where("id = ?", video.UserID).First(&u)
 		//将相关信息填入结构体中
-		v := models.VideoJSON{
-			ID: video.Id,
-			Author: models.UserJSON{
-				Avatar:          fmt.Sprintf("%s:%d/public/avatar/%d.png", config.Server.Host, config.Server.Port, u.Id),
-				BackgroundImage: fmt.Sprintf("%s:%d/public/background/%d.png", config.Server.Host, config.Server.Port, u.Id),
-				FavoriteCount:   utils.GetUserLikedVideoCount(u.Id),
-				FollowCount:     0,
-				FollowerCount:   0,
-				ID:              u.Id,
-				IsFollow:        true,
-				Name:            u.Username,
-				Signature:       "Hello World!",
-				TotalFavorited:  strconv.Itoa(like_sum),
-				WorkCount:       int64(len(videos)),
-			},
-			PlayURL:       fmt.Sprintf("%s:%d/public/video/%d%s", config.Server.Host, config.Server.Port, video.Id, video.Extension),
-			CoverURL:      fmt.Sprintf("%s:%d/public/screenshot/%d.png", config.Server.Host, config.Server.Port, video.Id),
-			FavoriteCount: utils.GetVideoLikeCount(video.Id),
-			CommentCount:  0,
-			IsFavorite:    false,
-			Title:         video.Title,
-		}
+		v := construct.VideoJSON(video.Id, claim.Id)
 		video_jsons = append(video_jsons, v)
 	}
 	c.JSON(200, gin.H{
