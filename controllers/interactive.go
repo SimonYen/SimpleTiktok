@@ -5,6 +5,7 @@ import (
 	"app/database"
 	"app/models"
 	"app/utils"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -92,8 +93,11 @@ func GetLikeList(c *gin.Context) {
 func Comment(c *gin.Context) {
 	//获取必要参数
 	tokenString := c.Query("token")
-	video_id, _ := strconv.Atoi(c.Query("user_id"))
+	video_id, _ := strconv.Atoi(c.Query("video_id"))
 	action_type, _ := strconv.Atoi(c.Query("action_type"))
+	fmt.Println("测试")
+	fmt.Println(video_id)
+	fmt.Println(action_type)
 	//先鉴权
 	if !utils.CheckToken(tokenString) {
 		c.JSON(200, gin.H{
@@ -143,4 +147,36 @@ func Comment(c *gin.Context) {
 			})
 		}
 	}
+}
+
+// 获取评论列表
+func GetCommentList(c *gin.Context) {
+	//获取必要参数
+	tokenString := c.Query("token")
+	video_id, _ := strconv.Atoi(c.Query("video_id"))
+	//先鉴权
+	if !utils.CheckToken(tokenString) {
+		c.JSON(200, gin.H{
+			"status_code":  1,
+			"status_msg":   "token鉴定失败！",
+			"comment_list": nil,
+		})
+		c.Abort()
+		return
+	}
+	//解析token
+	claim, _ := utils.ParseToken(tokenString)
+	//查询所有评论
+	var comments []models.Comment
+	var comments_json []models.CommentJSON
+	database.Handler.Where("video_id = ?", video_id).Find(&comments)
+	for _, com := range comments {
+		comment_json := construct.CommentJSON(com.Id, claim.Id)
+		comments_json = append(comments_json, comment_json)
+	}
+	c.JSON(200, gin.H{
+		"status_code":  0,
+		"status_msg":   "查询评论列表成功。",
+		"comment_list": comments_json,
+	})
 }
