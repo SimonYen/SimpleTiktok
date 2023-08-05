@@ -5,8 +5,8 @@ import (
 	"app/database"
 	"app/models"
 	"app/utils"
-	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -31,7 +31,6 @@ func VideoLike(c *gin.Context) {
 	//不能给自己点赞
 	video := new(models.Video)
 	database.Handler.Where("user_id = ? AND id = ?", claim.Id, uint(video_id)).First(video)
-	fmt.Println(video_id)
 	if video.Id != 0 {
 		c.JSON(200, gin.H{
 			"status_code": 1,
@@ -87,4 +86,61 @@ func GetLikeList(c *gin.Context) {
 		"status_msg":  "获取喜欢列表成功。",
 		"video_list":  videos,
 	})
+}
+
+// 评论操作
+func Comment(c *gin.Context) {
+	//获取必要参数
+	tokenString := c.Query("token")
+	video_id, _ := strconv.Atoi(c.Query("user_id"))
+	action_type, _ := strconv.Atoi(c.Query("action_type"))
+	//先鉴权
+	if !utils.CheckToken(tokenString) {
+		c.JSON(200, gin.H{
+			"status_code": 1,
+			"status_msg":  "token鉴定失败！",
+			"comment":     nil,
+		})
+		c.Abort()
+		return
+	}
+	//解析token
+	claim, _ := utils.ParseToken(tokenString)
+	if action_type == 1 {
+		//获取评论内容
+		comment_text := c.Query("comment_text")
+		comment := models.Comment{
+			Content:     comment_text,
+			VideoID:     uint(video_id),
+			UserID:      claim.Id,
+			CreatedTime: time.Now().Unix(),
+		}
+		database.Handler.Create(&comment)
+		c.JSON(200, gin.H{
+			"status_code": 0,
+			"status_msg":  "评论成功。",
+			"comment":     comment,
+		})
+	} else {
+		//获取需要删除的评论id
+		comment_id, _ := strconv.Atoi(c.Query("comment_id"))
+		//检查评论是否存在已经作者是否是本人
+		comment := new(models.Comment)
+		database.Handler.Where("id = ? AND user_id = ?", comment_id, claim.Id).First(comment)
+		if comment.Id == 0 {
+			c.JSON(200, gin.H{
+				"status_code": 1,
+				"status_msg":  "评论删除失败，评论不存在或者无权删除其他人的评论！",
+				"comment":     nil,
+			})
+		} else {
+			//删除操作
+			database.Handler.Delete(comment)
+			c.JSON(200, gin.H{
+				"status_code": 0,
+				"status_msg":  "评论删除成功。",
+				"comment":     nil,
+			})
+		}
+	}
 }
