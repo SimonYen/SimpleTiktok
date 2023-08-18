@@ -1,7 +1,7 @@
 #服务器配置
 [server]
 port=9999
-host="http://172.22.229.207"
+host="http://10.10.9.7"
 
 #Mysql配置
 [mysql]
