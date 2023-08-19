@@ -26,6 +26,14 @@ func Follow(c *gin.Context) {
 		return
 	}
 	claim, _ := utils.ParseToken(tokenString)
+	if claim.Id == uint(to_user_id) {
+		c.JSON(200, gin.H{
+			"status_code": 1,
+			"status_msg":  "小伙子，不能自己关注自己！",
+		})
+		c.Abort()
+		return
+	}
 	res := utils.FollowOrUnfollowUser(claim.Id, uint(to_user_id), action_type)
 	if res {
 		c.JSON(200, gin.H{
