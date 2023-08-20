@@ -5,8 +5,11 @@ import (
 	"app/models"
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/redis/go-redis/v9"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -15,6 +18,7 @@ import (
 var Handler *gorm.DB
 var RDB *redis.Client
 var CTX context.Context
+var MON *mongo.Client
 
 func init() {
 	db, err := gorm.Open(mysql.Open(config.Mysql.DSN()), &gorm.Config{})
@@ -33,4 +37,11 @@ func init() {
 	ctx := context.Background()
 	RDB = r
 	CTX = ctx
+	c, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	client, err := mongo.Connect(c, options.Client().ApplyURI(config.Mongo.URI()))
+	if err != nil {
+		panic(err)
+	}
+	MON = client
 }

@@ -24,15 +24,22 @@ type redis struct {
 	Host string
 }
 
+type mongo struct {
+	Port int
+	Host string
+}
+
 // 全局变量，用于保存viper读取到的
 var Server *server
 var Mysql *mysql
 var Redis *redis
+var Mongo *mongo
 
 func init() {
 	Server = new(server)
 	Mysql = new(mysql)
 	Redis = new(redis)
+	Mongo = new(mongo)
 	viper.SetConfigName("app")  //设置配置文件名
 	viper.SetConfigType("toml") //设置配置文件后缀
 	viper.AddConfigPath(".")    //设置配置文件路径
@@ -54,9 +61,16 @@ func init() {
 
 	Redis.Host = viper.GetString("redis.host")
 	Redis.Port = viper.GetInt("redis.port")
+
+	Mongo.Host = viper.GetString("mongo.host")
+	Mongo.Port = viper.GetInt("mongo.port")
 }
 
 // Mysql配置struct返回dsn字符串，便于之后连接数据库
 func (m *mysql) DSN() string {
 	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local", m.User, m.Password, m.Host, m.Port, m.Database)
+}
+
+func (m *mongo) URI() string {
+	return fmt.Sprintf("mongodb://%s:%d", m.Host, m.Port)
 }

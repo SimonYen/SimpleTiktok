@@ -140,3 +140,57 @@ func GetFridendList(c *gin.Context) {
 		"user_list":   user_json_list,
 	})
 }
+
+func SendMessage(c *gin.Context) {
+	//获取必要参数，action_type就算了，反正只有一种操作
+	tokenString := c.Query("token")
+	to_user_id, _ := strconv.Atoi(c.Query("to_user_id"))
+	content := c.Query("content")
+	//先鉴权
+	if !utils.CheckToken(tokenString) {
+		c.JSON(200, gin.H{
+			"status_code": 1,
+			"status_msg":  "token鉴定失败！",
+		})
+		c.Abort()
+		return
+	}
+	claim, _ := utils.ParseToken(tokenString)
+	//存入数据库
+	res := utils.SaveMessage(int(claim.Id), to_user_id, content)
+	if !res {
+		c.JSON(200, gin.H{
+			"status_code": 1,
+			"status_msg":  "数据库保存失败！",
+		})
+		c.Abort()
+		return
+	}
+	c.JSON(200, gin.H{
+		"status_code": 0,
+		"status_msg":  "消息发送成功。",
+	})
+}
+
+// 获取聊天记录
+func GetChatHistory(c *gin.Context) {
+	tokenString := c.Query("token")
+	to_user_id, _ := strconv.Atoi(c.Query("to_user_id"))
+	//先鉴权
+	if !utils.CheckToken(tokenString) {
+		c.JSON(200, gin.H{
+			"status_code":  "1",
+			"status_msg":   "token鉴定失败！",
+			"message_list": nil,
+		})
+		c.Abort()
+		return
+	}
+	claim, _ := utils.ParseToken(tokenString)
+	message_list := construct.Messages(int(claim.Id), to_user_id)
+	c.JSON(200, gin.H{
+		"status_code":  "0",
+		"status_msg":   "获取消息成功。",
+		"message_list": message_list,
+	})
+}

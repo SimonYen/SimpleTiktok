@@ -14,4 +14,6 @@ func loadSocial(e *gin.Engine) {
 	e.GET("/douyin/relation/follow/list/", controllers.GetFollowList)
 	e.GET("/douyin/relation/follower/list/", controllers.GetFansList)
 	e.GET("/douyin/relation/friend/list/", controllers.GetFridendList)
+	e.POST("/douyin/message/action/", controllers.SendMessage)
+	e.GET("/douyin/message/chat/", controllers.GetChatHistory)
 }
